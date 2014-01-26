@@ -326,6 +326,12 @@ class FogTest < Test::Unit::TestCase
           assert_equal dummy.avatar.expiring_url(1234), dummy.avatar.expiring_url(Time.now + 1234)
         end
 
+        should 'generate a secure url if fog_protocol option is provided' do
+          rebuild_model(@options.merge(:fog_protocol => 'https'))
+          dummy = Dummy.new
+          assert_match(/https/, dummy.avatar.expiring_url)
+        end
+
         should 'match the default url if there is no assignment' do
           dummy = Dummy.new
           assert_equal dummy.avatar.url, dummy.avatar.expiring_url
