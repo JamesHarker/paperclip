@@ -1,3 +1,30 @@
+New in 4.1.1:
+
+* Improvement: Add defauly translations for spoof validation
+* Bug Fix: Don't check for spoofs if the file hasn't changed
+* Bug Fix: Callback chain terminator is different in Rails 4.1, remove warnings
+* Improvement: Fixed various Ruby warnings
+* Bug Fix: Give bundler a hint, so it doesn't run forever on a fresh bundle
+* Improvement: Documentation fixes
+* Improvement: Allow travis-ci to finish-fast
+
+
+New in 4.1.0:
+
+* Improvement: Add :content_type_mappings to correct for missing spoof types
+* Improvement: Credit Egor Homakov with discovering the content_type spoof bug
+* Improvement: Memoize calls to identify in the thumbnail processor
+* Improvement: Make MIME type optional for Data URIs.
+* Improvement: Add default format for styles
+
+New in 4.0.0:
+
+* Security: Attachments are checked to make sure they're not pulling a fast one.
+* Security: It is now *enforced* that every attachment has a file/mime validation.
+* Bug Fix: Removed a call to IOAdapter#close that was causing issues.
+* Improvement: Added bullets to the 3.5.3 list of changes. Very important.
+* Improvement: Updated the copyright to 2014
+
 New in 3.5.3:
 
 * Improvement: After three long, hard years... we know how to upgrade

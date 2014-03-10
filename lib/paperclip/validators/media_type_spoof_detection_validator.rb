@@ -2,15 +2,12 @@ require 'active_model/validations/presence'
 
 module Paperclip
   module Validators
-    class AttachmentPresenceValidator < ActiveModel::EachValidator
+    class MediaTypeSpoofDetectionValidator < ActiveModel::EachValidator
       def validate_each(record, attribute, value)
-        if record.send("#{attribute}_file_name").blank?
-          record.errors.add(attribute, :blank, options)
+        adapter = Paperclip.io_adapters.for(value)
+        if Paperclip::MediaTypeSpoofDetector.using(adapter, value.original_filename).spoofed?
+          record.errors.add(attribute, :spoofed_media_type)
         end
-      end
-
-      def self.helper_method_name
-        :validates_attachment_presence
       end
     end
 
@@ -20,10 +17,10 @@ module Paperclip
       # * +if+: A lambda or name of an instance method. Validation will only
       #   be run if this lambda or method returns true.
       # * +unless+: Same as +if+ but validates if lambda or method returns false.
-      def validates_attachment_presence(*attr_names)
+      def validates_media_type_spoof_detection(*attr_names)
         options = _merge_attributes(attr_names)
-        validates_with AttachmentPresenceValidator, options.dup
-        validate_before_processing AttachmentPresenceValidator, options.dup
+        validates_with MediaTypeSpoofDetectionValidator, options.dup
+        validate_before_processing MediaTypeSpoofDetectionValidator, options.dup
       end
     end
   end

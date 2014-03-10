@@ -84,8 +84,7 @@ class HttpUrlProxyAdapterTest < Test::Unit::TestCase
     teardown do
       begin
         @subject.close
-      rescue Exception => e
-        binding.pry
+      rescue Exception
         true
       end
     end
@@ -95,7 +94,7 @@ class HttpUrlProxyAdapterTest < Test::Unit::TestCase
     end
 
     should "not generate paths that include restricted characters" do
-      assert_no_match /:/, @subject.path
+      assert_no_match(/:/, @subject.path)
     end
   end
 

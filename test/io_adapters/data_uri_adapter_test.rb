@@ -8,14 +8,19 @@ class DataUriAdapterTest < Test::Unit::TestCase
     end
   end
 
+  should 'allow a missing mime-type' do
+    adapter = Paperclip.io_adapters.for("data:;base64,#{original_base64_content}")
+    assert_equal Paperclip::DataUriAdapter, adapter.class
+  end
+
   context "a new instance" do
     setup do
       @contents = "data:image/png;base64,#{original_base64_content}"
       @subject = Paperclip.io_adapters.for(@contents)
     end
 
-    should "return a file name" do
-      assert_equal "base64.txt", @subject.original_filename
+    should "returns a file name based on the content type" do
+      assert_equal "data.png", @subject.original_filename
     end
 
     should "return a content type" do
