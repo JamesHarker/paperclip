@@ -20,6 +20,7 @@ module Paperclip
     end
 
     def original_filename=(new_filename)
+      return unless new_filename
       @original_filename = new_filename.gsub(OS_RESTRICTED_CHARACTERS, "_")
     end
 
@@ -34,7 +35,7 @@ module Paperclip
     private
 
     def destination
-      @destination ||= TempfileFactory.new.generate
+      @destination ||= TempfileFactory.new.generate(@original_filename.to_s)
     end
 
     def copy_to_tempfile(src)

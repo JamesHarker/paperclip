@@ -1,7 +1,7 @@
 Paperclip
 =========
 
-[![Build Status](https://secure.travis-ci.org/thoughtbot/paperclip.png?branch=master)](http://travis-ci.org/thoughtbot/paperclip) [![Dependency Status](https://gemnasium.com/thoughtbot/paperclip.png?travis)](https://gemnasium.com/thoughtbot/paperclip) [![Code Climate](https://codeclimate.com/github/thoughtbot/paperclip.png)](https://codeclimate.com/github/thoughtbot/paperclip)
+[![Build Status](https://secure.travis-ci.org/thoughtbot/paperclip.png?branch=master)](http://travis-ci.org/thoughtbot/paperclip) [![Dependency Status](https://gemnasium.com/thoughtbot/paperclip.png?travis)](https://gemnasium.com/thoughtbot/paperclip) [![Code Climate](https://codeclimate.com/github/thoughtbot/paperclip.png)](https://codeclimate.com/github/thoughtbot/paperclip) [![Inline docs](http://inch-ci.org/github/thoughtbot/paperclip.png)](http://inch-ci.org/github/thoughtbot/paperclip) [![Security](https://hakiri.io/github/thoughtbot/paperclip/master.svg)](https://hakiri.io/github/thoughtbot/paperclip/master)
 
 Paperclip is intended as an easy file attachment library for Active Record. The
 intent behind it was to keep setup as easy as possible and to treat files as
@@ -20,6 +20,7 @@ more detailed options.
 
 The complete [RDoc](http://rdoc.info/gems/paperclip) is online.
 
+---
 
 Requirements
 ------------
@@ -55,6 +56,45 @@ GhostScript to be installed. On Mac OS X, you can also install that using Homebr
 
     brew install gs
 
+### `file`
+
+The Unix [`file` command](http://en.wikipedia.org/wiki/File_(command)) is required for content type checking.
+This utility isn't available in Windows, but comes bundled with Ruby [Devkit](https://github.com/oneclick/rubyinstaller/wiki/Development-Kit), 
+so Windows users must make sure that the devkit is installed and added to system `PATH`.
+
+**Manual Installation**
+
+If you're using Windows 7+ as a development environment, you may need to install the `file.exe` application manually. The `file spoofing` system in Paperclip 4+ relies on this; if you don't have it working, you'll receive `Validation failed: Upload file has an extension that does not match its contents.` errors.
+
+To manually install, you should perform the following:
+
+> **Download & install `file` from [this URL](http://gnuwin32.sourceforge.net/packages/file.htm)**
+
+To test, you can use the following:
+![untitled](https://cloud.githubusercontent.com/assets/1104431/4524452/a1f8cce4-4d44-11e4-872e-17adb96f79c9.png)
+
+Next, you need to integrate with your environment - preferrably through the `PATH` variable, or by changing your `config/environments/development.rb` file
+
+**PATH**
+
+    1. Click "Start"
+    2. On "Computer", right-click and select "Properties"
+    3. In properties, select "Advanced System Settings"
+    4. Click the "Environment Variables" button
+    5. Locate the "PATH" var - at the end, add the path to your newly installed `file.exe` (typically `C:\Program Files (x86)\GnuWin32\bin`)
+    6. Restart any CMD shells you have open & see if it works
+
+OR 
+
+**Environment**
+
+    1. Open `config/environments/development.rb`
+    2. Add the following line: `Paperclip.options[:command_path] = 'C:\Program Files (x86)\GnuWin32\bin'`
+    3. Restart your Rails server
+
+Either of these methods will give your Rails setup access to the `file.exe` functionality, this providing the ability to check the contents of a file (fixing the spoofing problem)
+
+---
 
 Installation
 ------------
@@ -64,7 +104,7 @@ Paperclip is distributed as a gem, which is how it should be used in your app.
 Include the gem in your Gemfile:
 
 ```ruby
-gem "paperclip", "~> 4.1"
+gem "paperclip", "~> 4.2"
 ```
 
 If you're still using Rails 2.3.x, you should do this instead:
@@ -92,6 +132,8 @@ class ModuleName < ActiveRecord::Base
   ...
 end
 ```
+
+---
 
 Quick Start
 -----------
@@ -184,6 +226,7 @@ Set the attribute to `nil` and save.
 @user.avatar = nil
 @user.save
 ```
+---
 
 Usage
 -----
@@ -191,7 +234,7 @@ Usage
 The basics of paperclip are quite simple: Declare that your model has an
 attachment with the `has_attached_file` method, and give it a name.
 
-Paperclip will wrap up up to four attributes (all prefixed with that attachment's name,
+Paperclip will wrap up to four attributes (all prefixed with that attachment's name,
 so you can have multiple attachments per model if you wish) and give them a
 friendly front end. These attributes are:
 
@@ -221,6 +264,8 @@ Example Usage:
 ```ruby
 validates :avatar, :attachment_presence => true
 validates_with AttachmentPresenceValidator, :attributes => :avatar
+validates_with AttachmentSizeValidator, :attributes => :avatar, :less_than => 1.megabytes
+
 ```
 
 Validators can also be defined using the old helper style:
@@ -239,7 +284,7 @@ Lastly, you can also define multiple validations on a single attachment using `v
 
 ```ruby
 validates_attachment :avatar, :presence => true,
-  :content_type => { :content_type => "image/jpg" },
+  :content_type => { :content_type => "image/jpeg" },
   :size => { :in => 0..10.kilobytes }
 ```
 
@@ -298,11 +343,13 @@ image-y ones:
 
 ```ruby
 validates_attachment :avatar,
-  :content_type => { :content_type => ["image/jpg", "image/gif", "image/png"] }
+  :content_type => { :content_type => ["image/jpeg", "image/gif", "image/png"] }
 ```
 
 `Paperclip::ContentTypeDetector` will attempt to match a file's extension to an
 inferred content_type, regardless of the actual contents of the file.
+
+---
 
 Security Validations
 ====================
@@ -319,11 +366,11 @@ do this.
 ```ruby
 class ActiveRecord::Base
   has_attached_file :avatar
-# Validate content type
+  # Validate content type
   validates_attachment_content_type :avatar, :content_type => /\Aimage/
-# Validate filename
+  # Validate filename
   validates_attachment_file_name :avatar, :matches => [/png\Z/, /jpe?g\Z/]
-# Explicitly do not validate
+  # Explicitly do not validate
   do_not_validate_attachment_file_type :avatar
 end
 ```
@@ -339,6 +386,20 @@ MIME type, so, 'text' in 'text/plain'). This will prevent HTML documents from
 being uploaded as JPEGs, but will not prevent GIFs from being uploaded with a
 .jpg extension. This validation will only add validation errors to the form. It
 will not cause Errors to be raised.
+
+This can sometimes cause false validation errors in applications that use custom 
+file extensions. In these cases you may wish to add your custom extension to the
+list of file extensions allowed for your mime type configured by the mime-types 
+gem:
+
+```ruby
+# Allow ".foo" as an extension for files with the mime type "text/plain".
+text_plain = MIME::Types["text/plain"].first
+text_plain.extensions << "foo"
+MIME::Types.index_extensions text_plain
+```
+
+---
 
 Defaults
 --------
@@ -366,6 +427,7 @@ Paperclip::Attachment.default_options[:fog_credentials] = {:provider => "Local",
 Paperclip::Attachment.default_options[:fog_directory] = ""
 Paperclip::Attachment.default_options[:fog_host] = "http://localhost:3000"
 ```
+---
 
 Migrations
 ----------
@@ -426,6 +488,8 @@ end
 Vintage syntax (such as `t.has_attached_file` and `drop_attached_file`) are still supported in
 Paperclip 3.x, but you're advised to update those migration files to use this new syntax.
 
+---
+
 Storage
 -------
 
@@ -474,6 +538,8 @@ both the `:path` and `:url` options in order to make sure the files are unavaila
 to the public. Both `:path` and `:url` allow the same set of interpolated
 variables.
 
+---
+
 Post Processing
 ---------------
 
@@ -482,9 +548,10 @@ a set of styles for an attachment, by default it is expected that those
 "styles" are actually "thumbnails". However, you can do much more than just
 thumbnail images. By defining a subclass of Paperclip::Processor, you can
 perform any processing you want on the files that are attached. Any file in
-your Rails app's lib/paperclip\_processors directory is automatically loaded by
-paperclip, allowing you to easily define custom processors. You can specify a
-processor with the :processors option to `has_attached_file`:
+your Rails app's `lib/paperclip` and `lib/paperclip_processors` directories is
+automatically loaded by paperclip, allowing you to easily define custom
+processors. You can specify a processor with the :processors option to
+`has_attached_file`:
 
 ```ruby
 has_attached_file :scan, :styles => { :text => { :quality => :better } },
@@ -532,6 +599,8 @@ database, take a look at the [paperclip-meta](https://github.com/teeparham/paper
 Also, if you're interested in generating the thumbnail on-the-fly, you might want
 to look into the [attachment_on_the_fly](https://github.com/drpentode/Attachment-on-the-Fly) gem.
 
+---
+
 Events
 ------
 
@@ -561,6 +630,8 @@ class Message < ActiveRecord::Base
   end
 end
 ```
+
+---
 
 URI Obfuscation
 ---------------
@@ -604,6 +675,21 @@ class AddAvatarFingerprintColumnToUser < ActiveRecord::Migration
 end
 ```
 
+File Preservation for Soft-Delete
+-------
+
+An option is available to preserve attachments in order to play nicely with soft-deleted models. (acts_as_paranoid, paranoia, etc.)
+
+```ruby
+has_attached_file :some_attachment, {
+    :preserve_files => "true",
+}
+```
+
+This will prevent ```some_attachment``` from being wiped out when the model gets destroyed, so it will still exist when the object is restored later.
+
+---
+
 Custom Attachment Processors
 -------
 
@@ -621,6 +707,7 @@ implementation pattern of the thumbnail processor would be a way to implement a
 watermark processor.  All kinds of attachment processors can be created;
 a few utility examples would be compression and encryption processors.
 
+---
 
 Dynamic Configuration
 ---------------------
@@ -661,9 +748,11 @@ processors, where a defined `watermark` processor is invoked after the
 ```ruby
 class User < ActiveRecord::Base
   has_attached_file :avatar, :processors => lambda { |instance| instance.processors }
-  attr_accessor :watermark
+  attr_accessor :processors
 end
 ```
+
+---
 
 Logging
 ----------
@@ -678,6 +767,8 @@ end
 ```
 
 More information in the [rdocs](http://rdoc.info/github/thoughtbot/paperclip/Paperclip.options)
+
+---
 
 Deployment
 ----------
@@ -695,12 +786,14 @@ Here is an example for Capistrano:
 ```ruby
 namespace :deploy do
   desc "build missing paperclip styles"
-  task :build_missing_paperclip_styles, :roles => :app do
-    run "cd #{release_path}; RAILS_ENV=production bundle exec rake paperclip:refresh:missing_styles"
+  task :build_missing_paperclip_styles do
+    on roles(:app) do
+      execute "cd #{current_path}; RAILS_ENV=production bundle exec rake paperclip:refresh:missing_styles"
+    end
   end
 end
 
-after("deploy:update_code", "deploy:build_missing_paperclip_styles")
+after("deploy:compile_assets", "deploy:build_missing_paperclip_styles")
 ```
 
 Now you don't have to remember to refresh thumbnails in production every time you add a new style.
@@ -737,6 +830,8 @@ Then in `RAILS_ROOT/public/system/paperclip_attachments.yml`:
   - :thumb
 ```
 
+---
+
 Testing
 -------
 
@@ -763,6 +858,26 @@ end
 The important part here being the inclusion of `ENV['TEST_ENV_NUMBER']`, or the
 similar mechanism for whichever parallel testing library you use.
 
+**Integration Tests**
+
+Using integration tests with FactoryGirl may save multiple copies of
+your test files within the app. To avoid this, specify a custom path in
+the `config/environments/test.rb` like so:
+
+```ruby
+Paperclip::Attachment.default_options[:path] = "#{Rails.root}/spec/test_files/:class/:id_partition/:style.:extension"
+```
+
+Then, make sure to delete that directory after the test suite runs by adding
+this to `spec_helper.rb`.
+
+```ruby
+config.after(:suite) do
+  FileUtils.rm_rf(Dir["#{Rails.root}/spec/test_files/"])
+end
+```
+---
+
 Contributing
 ------------
 
@@ -778,6 +893,8 @@ guidelines:
 
 Please see `CONTRIBUTING.md` for more details on contributing and running test.
 
+---
+
 Credits
 -------
 
@@ -788,6 +905,8 @@ Paperclip is maintained and funded by [thoughtbot, inc](http://thoughtbot.com/co
 Thank you to all [the contributors](https://github.com/thoughtbot/paperclip/contributors)!
 
 The names and logos for thoughtbot are trademarks of thoughtbot, inc.
+
+---
 
 License
 -------

@@ -26,7 +26,7 @@ module Paperclip
     #   put your bucket name in this file, instead of adding it to the code directly.
     #   This is useful when you want the same account but a different bucket for
     #   development versus production.
-    #   When using a Proc it provides a single parameter which is the attachment itself. A  
+    #   When using a Proc it provides a single parameter which is the attachment itself. A
     #   method #instance is available on the attachment which will take you back to your
     #   code. eg.
     #     class User
@@ -51,7 +51,7 @@ module Paperclip
     #     :s3_permissions => :private
     #
     # * +s3_protocol+: The protocol for the URLs generated to your S3 assets. Can be either
-    #   'http', 'https', or an empty string to generate scheme-less URLs. Defaults to 'http'
+    #   'http', 'https', or an empty string to generate protocol-relative URLs. Defaults to 'http'
     #   when your :s3_permissions are :public_read (the default), and 'https' when your
     #   :s3_permissions are anything else.
     # * +s3_headers+: A hash of headers or a Proc. You may specify a hash such as
@@ -102,6 +102,14 @@ module Paperclip
     #   Redundancy Storage.  RRS enables customers to reduce their
     #   costs by storing non-critical, reproducible data at lower
     #   levels of redundancy than Amazon S3's standard storage.
+    #
+    #   You can set storage class on a per style bases by doing the following:
+    #     :s3_storage_class => {
+    #       :thumb => :reduced_reduncancy
+    #     }
+    #   Or globally:
+    #     :s3_storage_class => :reduced_redundancy
+
     module S3
       def self.extended base
         begin
@@ -139,18 +147,18 @@ module Paperclip
           @s3_headers = {}
           merge_s3_headers(@options[:s3_headers], @s3_headers, @s3_metadata)
 
-          @s3_headers[:storage_class] = @options[:s3_storage_class] if @options[:s3_storage_class]
+          @s3_storage_class = set_storage_class(@options[:s3_storage_class])
 
           @s3_server_side_encryption = :aes256
           if @options[:s3_server_side_encryption].blank?
             @s3_server_side_encryption = false
           end
           if @s3_server_side_encryption
-            @s3_server_side_encryption = @options[:s3_server_side_encryption].to_s.upcase
+            @s3_server_side_encryption = @options[:s3_server_side_encryption]
           end
 
           unless @options[:url].to_s.match(/\A:s3.*url\Z/) || @options[:url] == ":asset_host"
-            @options[:path] = @options[:path].gsub(/:url/, @options[:url]).gsub(/\A:rails_root\/public\/system/, '')
+            @options[:path] = path_option.gsub(/:url/, @options[:url]).gsub(/\A:rails_root\/public\/system/, '')
             @options[:url]  = ":s3_path_url"
           end
           @options[:url] = @options[:url].inspect if @options[:url].is_a?(Symbol)
@@ -272,6 +280,11 @@ module Paperclip
         permissions.merge :default => (permissions[:default] || :public_read)
       end
 
+      def set_storage_class(storage_class)
+        storage_class = {:default => storage_class} unless storage_class.respond_to?(:merge)
+        storage_class
+      end
+
       def parse_credentials creds
         creds = creds.respond_to?('call') ? creds.call(self) : creds
         creds = find_credentials(creds).stringify_keys
@@ -295,6 +308,10 @@ module Paperclip
         s3_permissions
       end
 
+      def s3_storage_class(style = default_style)
+        @s3_storage_class[style] || @s3_storage_class[:default]
+      end
+
       def s3_protocol(style = default_style, with_colon = false)
         protocol = @s3_protocol
         protocol = protocol.call(style, self) if protocol.respond_to?(:call)
@@ -312,6 +329,7 @@ module Paperclip
 
       def flush_writes #:nodoc:
         @queued_for_write.each do |style, file|
+        retries = 0
           begin
             log("saving #{path(style)}")
             acl = @s3_permissions[style] || @s3_permissions[:default]
@@ -320,6 +338,11 @@ module Paperclip
               :content_type => file.content_type,
               :acl => acl
             }
+
+            # add storage class for this style if defined
+            storage_class = s3_storage_class(style)
+            write_options.merge!(:storage_class => storage_class) if storage_class
+
             if @s3_server_side_encryption
               write_options[:server_side_encryption] = @s3_server_side_encryption
             end
@@ -335,9 +358,17 @@ module Paperclip
             write_options.merge!(@s3_headers)
 
             s3_object(style).write(file, write_options)
-          rescue AWS::S3::Errors::NoSuchBucket => e
+          rescue AWS::S3::Errors::NoSuchBucket
             create_bucket
             retry
+          rescue AWS::S3::Errors::SlowDown
+            retries += 1
+            if retries <= 5
+              sleep((2 ** retries) * 0.5)
+              retry
+            else
+              raise
+            end
           ensure
             file.rewind
           end
@@ -362,10 +393,11 @@ module Paperclip
 
       def copy_to_local_file(style, local_dest_path)
         log("copying #{path(style)} to local file #{local_dest_path}")
-        local_file = ::File.open(local_dest_path, 'wb')
-        file = s3_object(style)
-        local_file.write(file.read)
-        local_file.close
+        ::File.open(local_dest_path, 'wb') do |local_file|
+          s3_object(style).read do |chunk|
+            local_file.write(chunk)
+          end
+        end
       rescue AWS::Errors::Base => e
         warn("#{e} - cannot copy #{path(style)} to local file #{local_dest_path}")
         false

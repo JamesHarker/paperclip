@@ -1,6 +1,39 @@
+New in 4.2.1:
+
+* Improvement: Added `validate_media_type` options to allow/bypass spoof check
+* Improvement: Added incremental backoff when AWS gives us a SlowDown error.
+* Improvement: Stream downloads when usign aws-sdk.
+* Improvement: Documentation fixes, includes Windows instructions.
+* Improvement: Added pt-BR, zh-HK, zh-CN, zh-TW, and ja-JP locales.
+* Improvement: Better escaping for characters in URLs
+* Improvement: Honor `fog_credentials[:scheme]`
+* Improvement: Also look for custom processors in lib/paperclip
+* Improvement: id partitioning for string IDs works liks integer id
+* Improvement: Can pass options to DB adapters in migrations
+* Improvement: Update expiring_url creation for later versions of fog
+* Improvement: `path` can be a Proc in S3 attachments
+* Test Fix: Improves speed and reliability of the specs
+* Bug Fix: #original_filename= does not error when passed `nil`
+
+New in 4.2.0:
+
+* Improvement: Converted test suite from test/unit to RSpec
+* Improvement: Refactored Paperclip::Attachment#assign
+* Improvement: Added Spanish and German locales
+* Improvement: Required Validators accept validator subclasses
+* Improvement: EXIF orientation checking can be turned off for performance
+* Improvement: Documentation updates
+* Improvement: Better #human_size method for AttachmentSizeValidators
+* Bug Fix: Allow MIME-types with dots in them
+* Improvement: Travis CI updates
+* Improvement: Validators can take multiple messages
+* Improvement: Per-style options for S3 storage
+* Improvement: Allow `nil` geometry strings
+* Improvement: Use `eager_load!`
+
 New in 4.1.1:
 
-* Improvement: Add defauly translations for spoof validation
+* Improvement: Add default translations for spoof validation
 * Bug Fix: Don't check for spoofs if the file hasn't changed
 * Bug Fix: Callback chain terminator is different in Rails 4.1, remove warnings
 * Improvement: Fixed various Ruby warnings

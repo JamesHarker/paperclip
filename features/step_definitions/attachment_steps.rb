@@ -1,6 +1,6 @@
 module AttachmentHelpers
   def fixture_path(filename)
-    File.expand_path("#{PROJECT_ROOT}/test/fixtures/#{filename}")
+    File.expand_path("#{PROJECT_ROOT}/spec/support/fixtures/#{filename}")
   end
 
   def attachment_path(filename)
@@ -35,7 +35,7 @@ end
 
 Then /^the attachment "([^"]*)" should exist$/ do |filename|
   in_current_dir do
-    File.exists?(attachment_path(filename)).should be
+    File.exist?(attachment_path(filename)).should be
   end
 end
 
@@ -85,7 +85,7 @@ Then /^I should have attachment columns for "([^"]*)"$/ do |attachment_name|
       ["#{attachment_name}_updated_at", :datetime]
     ]
 
-    expect_columns.all?{ |column| columns.include? column }.should be_true
+    expect_columns.all?{ |column| columns.include? column }.should eq true
   end
 end
 
@@ -99,6 +99,6 @@ Then /^I should not have attachment columns for "([^"]*)"$/ do |attachment_name|
       ["#{attachment_name}_updated_at", :datetime]
     ]
 
-    expect_columns.none?{ |column| columns.include? column }.should be_true
+    expect_columns.none?{ |column| columns.include? column }.should eq true
   end
 end
